@@ -1,0 +1,48 @@
+---
+
+- name: add repository key
+  tags: naemon
+  apt_key: keyserver=keys.gnupg.net id='F8C1CA08A57B9ED7' state=present
+
+- name: add naemon repository
+  tags: naemon
+  apt_repository: repo='deb http://labs.consol.de/repo/stable/debian {{ansible_distribution_release}} main' update_cache=yes state=present
+
+- name: install naemon and dependancies
+  tags: naemon
+  apt: name={{ item }} update_cache=yes state=present
+  with_items:
+    - naemon
+    - naemon-core
+    - naemon-livestatus
+    - nagios-plugins
+
+- name: change naemon plugins directory
+  tags: naemon
+  lineinfile: dest=/etc/naemon/resource.cfg regexp='/usr/lib/naemon/plugins$' line='$USER1$=/usr/lib/nagios/plugins' backrefs=yes
+  notify: restart naemon
+
+# Naemon bugfix (should not be necessary in the next version)
+- name: check naemon rights
+  tags: naemon
+  file: path=/var/cache/naemon/live mode=777
+
+- name: install thruk and dependancies
+  tags:
+    - naemon
+    - thruk
+  apt: name={{ item }} update_cache=yes state=present
+  with_items:
+    - naemon-thruk
+    - naemon-thruk-reporting
+    - python-passlib
+  when: install_thruk is defined and install_thruk
+
+- name: set thruk admin password
+  tags:
+    - naemon
+    - thruk
+  htpasswd: path=/etc/naemon/htpasswd name=admin password={{thruk_admin_password}}
+  when:
+    - thruk_admin_password is defined and thruk_admin_password
+    - install_thruk is defined and install_thruk

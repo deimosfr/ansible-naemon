@@ -1,0 +1,71 @@
+---
+
+- name: install pnp4nagios dependancies
+  apt: name={{ item }} update_cache=yes state=present
+  with_items:
+    - rrdtool
+    - librrds-perl
+    - g++
+    - php5-cli
+    - php5-gd
+    - libapache2-mod-php5
+    - make
+
+- stat: path=/usr/local/pnp4nagios/bin/npcd
+  register: npcd_bin
+
+- name: get current version of pnp4nagios
+  shell: "/usr/local/pnp4nagios/bin/npcd -V 2>&1 | awk '/^npcd/{print $2}'"
+  register: npcd_version
+  changed_when: false
+  when: npcd_bin.stat.exists == true
+
+- name: getting pnp4nagios {{pnp4nagios_version}}
+  git: repo=http://git.code.sf.net/p/pnp4nagios/code dest=/tmp/pnp4nagios version={{pnp4nagios_version}}
+  when:
+    - pnp4nagios_version is defined
+    - npcd_bin.stat.exists == false or npcd_version.stdout != "{{pnp4nagios_version}}"
+
+- name: pnp4nagios compilation and installation 
+  shell: "{{item}}"
+  args:
+    chdir: /tmp/pnp4nagios
+  with_items:
+    - ./configure --with-nagios-user=naemon --with-nagios-group=naemon
+    - make all
+    - make install
+    - make install-webconf
+    - make install-config
+    - make install-init
+  when:
+    - pnp4nagios_version is defined
+    - npcd_bin.stat.exists == false or npcd_version.stdout != "{{pnp4nagios_version}}"
+
+- name: service start at boot and started
+  service: name=npcd state=started enabled=yes
+
+- name: updating apache configuration
+  replace: dest=/etc/apache2/conf.d/pnp4nagios.conf regexp="{{item.regexp}}" replace="{{item.replace}}"
+  with_items:
+    - { regexp: '(AuthUserFile\s+).*nagios.*', replace: '\1/etc/naemon/htpasswd\2' }
+    - { regexp: 'Nagios', replace: 'Naemon' }
+
+- name: updating pnp4nagios configuration
+  replace: dest=/usr/local/pnp4nagios/etc/config_local.php regexp="/nagios/cgi-bin" replace="/naemon/cgi-bin"
+
+- name: add performance data commands
+  copy: src="{{item.src}}" dest="{{item.dest}}" owner=naemon group=naemon mode=0644
+  with_items:
+    - { src: commands_pnp4nagios.cfg, dest: /etc/naemon/conf.d/ }
+    - { src: hosts_pnp4nagios.cfg, dest: /etc/naemon/conf.d/templates/ }
+    - { src: services_pnp4nagios.cfg, dest: /etc/naemon/conf.d/templates/ }
+  notify:
+    - restart naemon
+    - restart apache
+
+- name: removing installation files
+  file: path={{item}} state=absent
+  with_items:
+    - /usr/local/pnp4nagios/share/install.php
+    - /tmp/pnp4nagios
+

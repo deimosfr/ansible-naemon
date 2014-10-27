@@ -3,3 +3,7 @@
 - name: restart naemon
   tags: naemon
   service: name=naemon state=restarted
+
+- name: restart apache
+  tags: naemon
+  service: name=apache2 state=restarted

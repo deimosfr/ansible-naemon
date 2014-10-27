@@ -1,0 +1,16 @@
+---
+
+- name: install thruk and dependancies
+  apt: name={{ item }} update_cache=yes state=present
+  with_items:
+    - naemon-thruk
+    - naemon-thruk-reporting
+    - python-passlib
+
+- name: set thruk admin password
+  tags:
+    - naemon
+    - thruk
+  htpasswd: path=/etc/naemon/htpasswd name=admin password={{thruk_admin_password}}
+  when:
+    - thruk_admin_password is defined and thruk_admin_password

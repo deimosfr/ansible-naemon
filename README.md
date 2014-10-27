@@ -23,6 +23,11 @@ them are as follows:
     install_thruk: True
     # Set the Thruk Admin user password
     thruk_admin_password: <password>
+    # Set it to True if you want to install php4nagios
+    install_pnp4nagios: True
+    # Set wished pnp4nagios version
+    pnp4nagios_version: 0.6.24
+
 ```
 
 Examples
@@ -40,6 +45,8 @@ Examples
   vars:
     - install_thruk: True
     - thruk_admin_password: admin
+    - install_pnp4nagios: True
+    - pnp4nagios_version: 0.6.24
 ```
 
 Dependencies

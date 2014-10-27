@@ -1,15 +1,22 @@
 ---
 
+# Naemon
 - name: add repository key
-  tags: naemon
+  tags:
+    - naemon
+    - naemon_only
   apt_key: keyserver=keys.gnupg.net id='F8C1CA08A57B9ED7' state=present
 
 - name: add naemon repository
-  tags: naemon
+  tags:
+    - naemon
+    - naemon_only
   apt_repository: repo='deb http://labs.consol.de/repo/stable/debian {{ansible_distribution_release}} main' update_cache=yes state=present
 
 - name: install naemon and dependancies
-  tags: naemon
+  tags:
+    - naemon
+    - naemon_only
   apt: name={{ item }} update_cache=yes state=present
   with_items:
     - naemon
@@ -18,31 +25,35 @@
     - nagios-plugins
 
 - name: change naemon plugins directory
-  tags: naemon
+  tags:
+    - naemon
+    - naemon_only
   lineinfile: dest=/etc/naemon/resource.cfg regexp='/usr/lib/naemon/plugins$' line='$USER1$=/usr/lib/nagios/plugins' backrefs=yes
   notify: restart naemon
 
-# Naemon bugfix (should not be necessary in the next version)
+- name: set naemon configuration
+  tags:
+    - naemon
+    - naemon_only
+  template: src=naemon.cfg.j2 dest=/etc/naemon/naemon.cfg owner=naemon group=naemon mode=0644
+  notify: restart naemon
+
 - name: check naemon rights
-  tags: naemon
+  tags:
+    - naemon
+    - naemon_only
   file: path=/var/cache/naemon/live mode=777
 
-- name: install thruk and dependancies
+# Thruk
+- include: thruk.yml
   tags:
     - naemon
     - thruk
-  apt: name={{ item }} update_cache=yes state=present
-  with_items:
-    - naemon-thruk
-    - naemon-thruk-reporting
-    - python-passlib
   when: install_thruk is defined and install_thruk
 
-- name: set thruk admin password
+# PNPNagios
+- include: pnp4nagios.yml
   tags:
     - naemon
-    - thruk
-  htpasswd: path=/etc/naemon/htpasswd name=admin password={{thruk_admin_password}}
-  when:
-    - thruk_admin_password is defined and thruk_admin_password
-    - install_thruk is defined and install_thruk
+    - pnp4nagios
+  when: install_pnp4nagios is defined and install_pnp4nagios

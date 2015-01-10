@@ -1,0 +1,8 @@
+# Set it to True if you want to install Thruk
+install_thruk: False
+# Set the Thruk Admin user password
+thruk_admin_password: <password>
+# Set it to True if you want to install php4nagios
+install_pnp4nagios: False
+# Set wished pnp4nagios version
+pnp4nagios_version: 0.6.24
